@@ -107,6 +107,8 @@ private:
 //!
 //! \return Returns true if the engine was created successfully and false otherwise
 //!
+
+// main入口===============================================================
 bool SampleMNIST::build()
 {
     auto builder = SampleUniquePtr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(sample::gLogger.getTRTLogger()));
@@ -115,32 +117,38 @@ bool SampleMNIST::build()
         return false;
     }
 
+    // 生成一个network
     auto network = SampleUniquePtr<nvinfer1::INetworkDefinition>(builder->createNetworkV2(0));
     if (!network)
     {
         return false;
     }
 
+    // 生成一个config
     auto config = SampleUniquePtr<nvinfer1::IBuilderConfig>(builder->createBuilderConfig());
     if (!config)
     {
         return false;
     }
 
+    // 生成一个parse
     auto parser = SampleUniquePtr<nvcaffeparser1::ICaffeParser>(nvcaffeparser1::createCaffeParser());
     if (!parser)
     {
         return false;
     }
 
+    // 构建网络  line266==========================================================bool SampleMNIST::constructNetwork()
     if (!constructNetwork(parser, network))
     {
         return false;
     }
 
+    // 设置bathsize
     builder->setMaxBatchSize(mParams.batchSize);
     config->setMaxWorkspaceSize(16_MiB);
     config->setFlag(BuilderFlag::kGPU_FALLBACK);
+    // 设置精度
     if (mParams.fp16)
     {
         config->setFlag(BuilderFlag::kFP16);
@@ -150,6 +158,7 @@ bool SampleMNIST::build()
         config->setFlag(BuilderFlag::kINT8);
     }
 
+    // 设置是否支持DLA   DLA：一种深度网络特征融合方法  https://zhuanlan.zhihu.com/p/364196632
     samplesCommon::enableDLA(builder.get(), config.get(), mParams.dlaCore);
 
     // CUDA stream used for profiling by the builder.
@@ -172,6 +181,7 @@ bool SampleMNIST::build()
         return false;
     }
 
+    // 得到Engine！！！！！！！！===========================
     mEngine = std::shared_ptr<nvinfer1::ICudaEngine>(
         runtime->deserializeCudaEngine(plan->data(), plan->size()), samplesCommon::InferDeleter());
     if (!mEngine)
@@ -280,6 +290,7 @@ bool SampleMNIST::constructNetwork(
     float maxMean
         = samplesCommon::getMaxValue(static_cast<const float*>(meanWeights.values), samplesCommon::volume(inputDims));
 
+    // 网络
     auto mean = network->addConstant(nvinfer1::Dims3(1, inputDims.d[1], inputDims.d[2]), meanWeights);
     if (!mean->getOutput(0)->setDynamicRange(-maxMean, maxMean))
     {
@@ -294,6 +305,7 @@ bool SampleMNIST::constructNetwork(
     {
         return false;
     }
+    // 得到网络的输入输出
     network->getLayer(0)->setInput(0, *meanSub->getOutput(0));
     samplesCommon::setAllDynamicRanges(network.get(), 127.0f, 127.0f);
 
@@ -306,9 +318,12 @@ bool SampleMNIST::constructNetwork(
 //! \details This function is the main execution function of the sample. It allocates
 //!          the buffer, sets inputs, executes the engine, and verifies the output.
 //!
+
+// step2: 推荐inference===============================================================
 bool SampleMNIST::infer()
 {
     // Create RAII buffer manager object
+    // 根据engine和batchsize自动生成一块输入的数据和输出的数据====================================
     samplesCommon::BufferManager buffers(mEngine, mParams.batchSize);
 
     auto context = SampleUniquePtr<nvinfer1::IExecutionContext>(mEngine->createExecutionContext());
@@ -336,7 +351,9 @@ bool SampleMNIST::infer()
     buffers.copyInputToDeviceAsync(stream);
 
     // Asynchronously enqueue the inference work
-    if (!context->enqueue(mParams.batchSize, buffers.getDeviceBindings().data(), stream, nullptr))
+    // 异步推理=====================================================================
+    // https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl#IIXGh
+    if (!context->enqueue(mParams.batchSize, buffers.getDeviceBindings().data(), stream, nullptr)) // getDeviceBindings：直接获得输入和输出的指针的值
     {
         return false;
     }
@@ -441,12 +458,14 @@ int main(int argc, char** argv)
 
     SampleMNIST sample(params);
     sample::gLogInfo << "Building and running a GPU inference engine for MNIST" << std::endl;
-
+    
+    // step1 build
     if (!sample.build())
     {
         return sample::gLogger.reportFail(sampleTest);
     }
 
+    // step2 推理inference
     if (!sample.infer())
     {
         return sample::gLogger.reportFail(sampleTest);

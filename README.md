@@ -9,6 +9,13 @@ This repository contains the Open Source Software (OSS) components of NVIDIA Ten
 * For press and other inquiries, please contact Hector Marinez at [hmarinez@nvidia.com](mailto:hmarinez@nvidia.com)
 
 
+# 介绍(hcq)
+https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl
+
+* [sampleMNIST入门学习](samples/sampleMNIST/sampleMNIST.cpp)
+* onnx:[sampleOnnxMNIST](samples/sampleOnnxMNIST/sampleOnnxMNIST.cpp)
+
+
 # Build
 
 ## Prerequisites

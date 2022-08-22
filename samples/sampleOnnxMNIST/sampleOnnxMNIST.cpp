@@ -99,6 +99,8 @@ private:
 //!
 //! \return Returns true if the engine was created successfully and false otherwise
 //!
+
+// step1: 构建
 bool SampleOnnxMNIST::build()
 {
     auto builder = SampleUniquePtr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(sample::gLogger.getTRTLogger()));
@@ -108,6 +110,7 @@ bool SampleOnnxMNIST::build()
     }
 
     const auto explicitBatch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+    // 生成network， config， parser
     auto network = SampleUniquePtr<nvinfer1::INetworkDefinition>(builder->createNetworkV2(explicitBatch));
     if (!network)
     {
@@ -127,6 +130,7 @@ bool SampleOnnxMNIST::build()
         return false;
     }
 
+    //构建网络
     auto constructed = constructNetwork(builder, network, config, parser);
     if (!constructed)
     {
@@ -153,6 +157,7 @@ bool SampleOnnxMNIST::build()
         return false;
     }
 
+    // 得到Engine！！！！！！！！===========================
     mEngine = std::shared_ptr<nvinfer1::ICudaEngine>(
         runtime->deserializeCudaEngine(plan->data(), plan->size()), samplesCommon::InferDeleter());
     if (!mEngine)
@@ -179,10 +184,13 @@ bool SampleOnnxMNIST::build()
 //!
 //! \param builder Pointer to the engine builder
 //!
+
+// 构建网络
 bool SampleOnnxMNIST::constructNetwork(SampleUniquePtr<nvinfer1::IBuilder>& builder,
     SampleUniquePtr<nvinfer1::INetworkDefinition>& network, SampleUniquePtr<nvinfer1::IBuilderConfig>& config,
     SampleUniquePtr<nvonnxparser::IParser>& parser)
 {
+    // 解析得到parse
     auto parsed = parser->parseFromFile(locateFile(mParams.onnxFileName, mParams.dataDirs).c_str(),
         static_cast<int>(sample::gLogger.getReportableSeverity()));
     if (!parsed)
@@ -191,6 +199,7 @@ bool SampleOnnxMNIST::constructNetwork(SampleUniquePtr<nvinfer1::IBuilder>& buil
     }
 
     config->setMaxWorkspaceSize(16_MiB);
+    // 设置精度
     if (mParams.fp16)
     {
         config->setFlag(BuilderFlag::kFP16);
@@ -201,6 +210,7 @@ bool SampleOnnxMNIST::constructNetwork(SampleUniquePtr<nvinfer1::IBuilder>& buil
         samplesCommon::setAllDynamicRanges(network.get(), 127.0f, 127.0f);
     }
 
+    // 设置是否支持DLA   DLA：一种深度网络特征融合方法  https://zhuanlan.zhihu.com/p/364196632
     samplesCommon::enableDLA(builder.get(), config.get(), mParams.dlaCore);
 
     return true;
@@ -212,9 +222,12 @@ bool SampleOnnxMNIST::constructNetwork(SampleUniquePtr<nvinfer1::IBuilder>& buil
 //! \details This function is the main execution function of the sample. It allocates the buffer,
 //!          sets inputs and executes the engine.
 //!
+
+// step2: 推理inference
 bool SampleOnnxMNIST::infer()
 {
     // Create RAII buffer manager object
+    // 根据engine和batchsize自动生成一块输入的数据和输出的数据====================================
     samplesCommon::BufferManager buffers(mEngine);
 
     auto context = SampleUniquePtr<nvinfer1::IExecutionContext>(mEngine->createExecutionContext());
@@ -233,7 +246,11 @@ bool SampleOnnxMNIST::infer()
     // Memcpy from host input buffers to device input buffers
     buffers.copyInputToDevice();
 
-    bool status = context->executeV2(buffers.getDeviceBindings().data());
+    // 同步推理=====================================================================
+    // https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl#IIXGh
+    // 同步接口：execute()/executeV2()
+    // 异步接口：enqueue()/enqueueV2()
+    bool status = context->executeV2(buffers.getDeviceBindings().data());  // getDeviceBindings：直接获得输入和输出的指针的值
     if (!status)
     {
         return false;
@@ -391,10 +408,12 @@ int main(int argc, char** argv)
 
     sample::gLogInfo << "Building and running a GPU inference engine for Onnx MNIST" << std::endl;
 
+    // step1 build
     if (!sample.build())
     {
         return sample::gLogger.reportFail(sampleTest);
     }
+    // step2 推理inference
     if (!sample.infer())
     {
         return sample::gLogger.reportFail(sampleTest);
