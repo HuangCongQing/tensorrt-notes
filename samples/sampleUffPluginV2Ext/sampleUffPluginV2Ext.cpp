@@ -351,9 +351,11 @@ private:
     samplesCommon::UffSampleParams mParams;
 };
 
+// main入口==========================================
 class UffPoolPluginV2 : public IPluginV2IOExt
 {
 public:
+    // 系列化使用
     UffPoolPluginV2(const PluginFieldCollection& fc)
     {
         // To do: TRT-TRT-8010 Populate Parameters from fc object w/ hard code
@@ -368,6 +370,7 @@ public:
         (void) fc;
     }
 
+    // 反序列化使用
     UffPoolPluginV2(const void* data, size_t length)
     {
         const char* d = static_cast<const char*>(data);
@@ -400,11 +403,17 @@ public:
     virtual ~UffPoolPluginV2() {}
 
 public:
+    // 获得输出的个数
+    // 插件op返回多少个Tensor，比如MyCustomPlugin这个操作只输出一个Tensor(也就是一个output)，所以直接return 1：
     int getNbOutputs() const noexcept override
     {
         return 1;
     }
 
+
+    // 获得输出的dim
+    // TensorRT支持Dynamic-shape的时候，batch这一维度必须是explicit的，也就是说，TensorRT处理的维度从以往的三维[3,-1,-1]变成了[1,3,-1,-1]。
+    // 最新的onnx-tensorrt也必须设置explicit的batchsize，而且这个batch维度在getOutputDimensions中是可以获取到的。
     Dims getOutputDimensions(int index, const Dims* inputs, int nbInputDims) noexcept override
     {
         ASSERT(index == 0 && nbInputDims == 1 && inputs[0].nbDims == 3);
@@ -414,6 +423,16 @@ public:
         return Dims3(inputs[0].d[0], outDims.h(), outDims.w());
     }
 
+    // initialize和terminate这两个比较重要！！！！！！！！！！！！！！
+    // 初始化
+    /* 
+    初始化函数，在这个插件准备开始run之前执行。
+
+主要初始化一些提前开辟空间的参数，一般是一些cuda操作需要的参数(例如conv操作需要执行卷积操作，我们就需要提前开辟weight和bias的显存)，假如我们的算子需要这些参数，则在这里需要提前开辟显存。
+
+需要注意的是，如果插件算子需要开辟比较大的显存空间，不建议自己去申请显存空间，可以使用Tensorrt官方接口传过来的workspace指针来获取显存空间。因为如果这个插件被一个网络调用了很多次，而这个插件op需要开辟很多显存空间，那么TensorRT在构建network的时候会根据这个插件被调用的次数开辟很多显存，很容易导致显存溢出。
+    
+     */
     int initialize() noexcept override
     {
         CHECK(cudnnCreate(&mCudnn));
@@ -425,6 +444,7 @@ public:
         return 0;
     }
 
+    // 比较重要!!!!
     void terminate() noexcept override
     {
         CHECK(cudnnDestroyTensorDescriptor(mSrcDescriptor));
@@ -433,11 +453,21 @@ public:
         CHECK(cudnnDestroy(mCudnn));
     }
 
+    // 显存大小不可控????????????????///
+    // 这个函数需要返回这个插件op需要中间显存变量的实际数据大小(bytesize)，这个是通过TensorRT的接口去获取，是比较规范的方式。
+    // 我们需要在这里确定这个op需要多大的显存空间去运行，在实际运行的时候就可以直接使用TensorRT开辟好的空间而不是自己去申请显存空间。
     size_t getWorkspaceSize(int maxBatchSize) const noexcept override
     {
         return 0;
     }
 
+    //===================================================================================
+    // 实际插件op的执行函数，我们自己实现的cuda操作就放到这里(当然C++写的op也可以放进来，不过因为是CPU执行，速度就比较慢了)，
+    // 与往常一样接受输入inputs产生输出outputs，传给相应的指针就可以。
+
+    // 需要注意的是，如果我们的操作需要一些分布在显存中的中间变量，可以通过传过来的指针参数workspace获取，上述代码简单说明了一下使用方法。
+
+    // 再多说一句，我们默认写的.cu是fp32的，TensorRT在fp16运行模式下，运行到不支持fp16的插件op时，会自动切换到fp32模式，等插件op运行完再切换回来。
     int enqueue(int batchSize, const void* const* inputs, void* const* outputs, void* workspace,
         cudaStream_t stream) noexcept override
     {
@@ -474,6 +504,8 @@ public:
         return 0;
     }
 
+    // 得到序列化的大小
+    // 返回序列化时需要写多少字节到buffer中。
     size_t getSerializationSize() const noexcept override
     {
         size_t serializationSize = 0;
@@ -490,6 +522,8 @@ public:
         return serializationSize;
     }
 
+    // 序列化代码
+    // 把需要用的数据按照顺序序列化到buffer里头。
     void serialize(void* buffer) const noexcept override
     {
         char* d = static_cast<char*>(buffer);
@@ -516,6 +550,12 @@ public:
         ASSERT(d == a + getSerializationSize());
     }
 
+    // 判断输入是否符合标准 ,判断异常情况
+    // 配置这个插件op，判断输入和输出类型数量是否正确。官方还提到通过这个配置信息可以告知TensorRT去选择合适的算法(algorithm)去调优这个模型。
+
+    // 但自动调优目前还没有尝试过，我们一般自己写的plugin执行代码都是定死的，所谓的调优步骤可能更多地针对官方的op。
+
+    // 下面的plugin中configurePlugin函数仅仅是简单地确认了下输入和输出以及类型。
     void configurePlugin(const PluginTensorDesc* in, int nbInput, const PluginTensorDesc* out, int nbOutput) noexcept override
     {
         ASSERT(in && nbInput == 1);
@@ -545,6 +585,7 @@ public:
         return condition;
     }
 
+    // 返回结果的类型，一般来说我们插件op返回结果类型与输入类型一致：
     DataType getOutputDataType(int index, const DataType* inputTypes, int nbInputs) const noexcept override
     {
         ASSERT(inputTypes && nbInputs == 1);
@@ -567,12 +608,16 @@ public:
         delete this;
     }
 
+    // 这玩意儿干嘛的，顾名思义，就是克隆嘛，将这个plugin对象克隆一份给TensorRT的builder、network或者engine。
+    // 这个成员函数会调用上述说到的第二个构造函数：
     IPluginV2Ext* clone() const noexcept override
     {
         auto* plugin = new UffPoolPluginV2(*this);
         return plugin;
     }
 
+    // set/getPluginNamespace
+    // 为这个插件设置namespace名字，如果不设置则默认是""，需要注意的是同一个namespace下的plugin如果名字相同会冲突。
     void setPluginNamespace(const char* libNamespace) noexcept override
     {
         mNamespace = libNamespace;
@@ -660,6 +705,8 @@ private:
     std::string mNamespace;
 };
 
+// 构造函数
+// 反序列化: 从文件中的数据得到plugin
 class UffPoolPluginV2Creator : public IPluginCreator
 {
 public:
@@ -678,6 +725,7 @@ public:
         return &mFieldCollection;
     }
 
+    // 核心==================================================================================
     IPluginV2* createPlugin(const char* name, const PluginFieldCollection* fc) noexcept override
     {
         auto* plugin = new UffPoolPluginV2(*fc);
