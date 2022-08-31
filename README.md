@@ -12,6 +12,8 @@ https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl
 * [sampleMNIST入门学习](samples/sampleMNIST/sampleMNIST.cpp)
 * onnx:[sampleOnnxMNIST](samples/sampleOnnxMNIST/sampleOnnxMNIST.cpp)
 
+* plugin学习笔记和代码：https://github.com/HuangCongQing/tensorrt-plugin
+
 
 
 # TensorRT Open Source Software
