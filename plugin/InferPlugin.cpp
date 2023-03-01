@@ -205,6 +205,9 @@ extern "C"
         initializePlugin<nvinfer1::plugin::SpecialSlicePluginCreator>(logger, libNamespace);
         initializePlugin<nvinfer1::plugin::SplitPluginCreator>(logger, libNamespace);
         initializePlugin<nvinfer1::plugin::VoxelGeneratorPluginCreator>(logger, libNamespace);
+        // inferplugin.cpp文件中添加初始化plugin的接口
+        // CustomPluginCreator locate:  plugin/CustomPlugin/ICustomPlugin.h
+        initializePlugin<nvinfer1::plugin::CustomPluginCreator>(logger, libNamespace);
         return true;
     }
 } // extern "C"

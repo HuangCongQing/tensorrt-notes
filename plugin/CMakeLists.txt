@@ -61,6 +61,9 @@ set(PLUGIN_LISTS
     specialSlicePlugin
     splitPlugin
     voxelGeneratorPlugin
+    # 添加编译Custom插件的选项<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    CustomPlugin
+
     )
 
 # Add BERT sources if ${BERT_GENCODES} was populated
