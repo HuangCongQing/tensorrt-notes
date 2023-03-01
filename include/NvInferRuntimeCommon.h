@@ -1244,6 +1244,7 @@ public:
     //! - Allowed context for the API call
     //!   - Thread-safe: Yes
     //!
+    // 根据里面的三个参数pluginName&pluginVersion&pluginNamespace 就可以获得这个Creator
     virtual IPluginCreator* getPluginCreator(AsciiChar const* const pluginName, AsciiChar const* const pluginVersion,
         AsciiChar const* const pluginNamespace = "") noexcept
         = 0;
