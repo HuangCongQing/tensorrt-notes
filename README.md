@@ -13,6 +13,7 @@ https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl
 * onnx:[sampleOnnxMNIST](samples/sampleOnnxMNIST/sampleOnnxMNIST.cpp)
 
 * plugin学习笔记和代码：https://github.com/HuangCongQing/tensorrt-plugin
+  * 自定义plugin code： [plugin/CustomPlugin](plugin/CustomPlugin)
 
 
 
