@@ -14,6 +14,7 @@ https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl
 
 * plugin学习笔记和代码：https://github.com/HuangCongQing/tensorrt-plugin
   * 自定义plugin code： [plugin/CustomPlugin](plugin/CustomPlugin)
+    * doc: https://www.yuque.com/huangzhongqing/gk5f7m/cky7wmzevw9gcyfq
 
 
 

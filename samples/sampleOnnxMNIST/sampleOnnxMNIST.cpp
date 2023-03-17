@@ -386,38 +386,39 @@ void printHelpInfo()
 
 int main(int argc, char** argv)
 {
-    samplesCommon::Args args;
-    bool argsOK = samplesCommon::parseArgs(args, argc, argv);
+    samplesCommon::Args args;	// 接收用户传递参数的变量
+    bool argsOK = samplesCommon::parseArgs(args, argc, argv);	// 将main函数的参数argc和argv解释成args，返回转换是否成功的bool值
     if (!argsOK)
     {
         sample::gLogError << "Invalid arguments" << std::endl;
         printHelpInfo();
         return EXIT_FAILURE;
     }
-    if (args.help)
+    if (args.help) // 如果接收的参数是请求打印帮助信息，则打印帮助信息，退出程序。
     {
         printHelpInfo();
         return EXIT_SUCCESS;
     }
 
-    auto sampleTest = sample::gLogger.defineTest(gSampleName, argc, argv);
+    auto sampleTest = sample::gLogger.defineTest(gSampleName, argc, argv);	// 定义一个日志类
 
-    sample::gLogger.reportTestStart(sampleTest);
+    // ==========================记录日志的开始==========================================
+    sample::gLogger.reportTestStart(sampleTest);	// 记录日志的开始
 
-    SampleOnnxMNIST sample(initializeSampleParams(args));
+    SampleOnnxMNIST sample(initializeSampleParams(args)); 	// 定义一个sample实例<<<<<<<<<<<<<<<<,
 
     sample::gLogInfo << "Building and running a GPU inference engine for Onnx MNIST" << std::endl;
 
     // step1 build
-    if (!sample.build())
+    if (!sample.build()) // 【主要】在build方法中构建网络，返回构建网络是否成功的状态
     {
         return sample::gLogger.reportFail(sampleTest);
     }
     // step2 推理inference
-    if (!sample.infer())
+    if (!sample.infer()) 	// 【主要】读取图像并进行推理，返回推理是否成功的状态
     {
         return sample::gLogger.reportFail(sampleTest);
     }
 
-    return sample::gLogger.reportPass(sampleTest);
+    return sample::gLogger.reportPass(sampleTest);	// 报告结束
 }
