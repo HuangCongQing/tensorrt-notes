@@ -389,8 +389,11 @@ struct InferDeleter
     }
 };
 
+// 创建一个指向模版类T类型、销毁方式为samplesCommon::InferDeleter的智能指针unique_ptr的声明，用using关键字重命名为SampleUniquePtr
 template <typename T>
 using SampleUniquePtr = std::unique_ptr<T, InferDeleter>;
+// using关键字是c++11中为类取别名的新关键字
+// std::unique_ptr是智能指针的关键字
 
 static auto StreamDeleter = [](cudaStream_t* pStream)
     {

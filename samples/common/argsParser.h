@@ -58,6 +58,7 @@ struct CaffeSampleParams : public SampleParams
 //! \brief The OnnxSampleParams structure groups the additional parameters required by
 //!         networks that use ONNX
 //!
+// 继承自SampleParams结构体的，只不过新增了一个onxxFileName成员变量
 struct OnnxSampleParams : public SampleParams
 {
     std::string onnxFileName; //!< Filename of ONNX file of a network
@@ -77,15 +78,15 @@ struct UffSampleParams : public SampleParams
 //!
 struct Args
 {
-    bool runInInt8{false};
-    bool runInFp16{false};
-    bool help{false};
-    int32_t useDLACore{-1};
-    int32_t batch{1};
-    std::vector<std::string> dataDirs;
-    std::string saveEngine;
-    std::string loadEngine;
-    bool useILoop{false};
+    bool runInInt8{false};	// 用INT8精度运行
+    bool runInFp16{false};	// 用FP16精度运行
+    bool help{false};	// 打印help信息
+    int32_t useDLACore{-1};// 使用DLA核
+    int32_t batch{1}; // batch的大小
+    std::vector<std::string> dataDirs; // 数据文件夹的位置
+    std::string saveEngine; // 存储引擎
+    std::string loadEngine;	// 加载引擎
+    bool useILoop{false};// TODO 未知
 };
 
 //!

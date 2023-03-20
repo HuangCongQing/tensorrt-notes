@@ -11,6 +11,8 @@ https://www.yuque.com/huangzhongqing/gk5f7m/ysgfhl
 
 * [sampleMNIST入门学习](samples/sampleMNIST/sampleMNIST.cpp)
 * onnx:[sampleOnnxMNIST](samples/sampleOnnxMNIST/sampleOnnxMNIST.cpp)
+  * 推荐非常棒的解读！：https://blog.csdn.net/yanggg1997/article/details/111587687#t17
+  * docs:https://www.yuque.com/huangzhongqing/gk5f7m/tfyfx6#XNtir
 
 * plugin学习笔记和代码：https://github.com/HuangCongQing/tensorrt-plugin
   * 自定义plugin code： [plugin/CustomPlugin](plugin/CustomPlugin)
